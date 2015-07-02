@@ -1,0 +1,60 @@
+#!/bin/bash
+
+CONSUL_KEY=$1
+BIND_ADDR=$2
+CONSUL_PATH=/usr/local/bin
+
+if [ ! -f "$CONSUL_PATH/consul" ];
+then
+  echo "Consul does not exist"
+  if ! command -v unzip > /dev/null; then
+    echo "Unzip does not exist"
+    apt-get update
+    apt-get install unzip
+  fi
+
+  cd $CONSUL_PATH
+  wget https://dl.bintray.com/mitchellh/consul/0.3.0_linux_amd64.zip
+  unzip *.zip
+  rm *.zip
+
+  useradd -d /home/consul -m consul -p '' > /dev/null
+
+  mkdir -p /etc/consul.d/{bootstrap,server,client}
+  mkdir -p /var/consul
+
+  chown consul:consul /var/consul
+
+  sudo -H -u consul bash -c 'cd ~; wget https://dl.bintray.com/mitchellh/consul/0.3.0_web_ui.zip; unzip *.zip; rm *.zip;'
+
+  cat <<EOT > /etc/consul.d/server/config.json
+{
+    "bootstrap": true,
+    "server": true,
+    "datacenter": "nyc3",
+    "ui_dir": "/home/consul/dist",
+    "data_dir": "/var/consul",
+    "encrypt": "$CONSUL_KEY",
+    "log_level": "INFO",
+    "enable_syslog": true,
+    "client_addr": "$BIND_ADDR",
+    "bind_addr": "$BIND_ADDR"
+}
+EOT
+
+cat << EOT > /etc/init/consul.conf
+description "Consul server process"
+
+start on (local-filesystems and net-device-up IFACE=eth0)
+stop on runlevel [!12345]
+
+respawn
+
+setuid consul
+setgid consul
+
+exec consul agent -config-dir /etc/consul.d/server
+
+EOT
+
+fi
