@@ -14,7 +14,7 @@ then
   fi
 
   cd $CONSUL_PATH
-  wget https://dl.bintray.com/mitchellh/consul/0.3.0_linux_amd64.zip
+  wget https://dl.bintray.com/mitchellh/consul/0.5.2_linux_amd64.zip
   unzip *.zip
   rm *.zip
 
@@ -25,7 +25,7 @@ then
 
   chown consul:consul /var/consul
 
-  sudo -H -u consul bash -c 'cd ~; wget https://dl.bintray.com/mitchellh/consul/0.3.0_web_ui.zip; unzip *.zip; rm *.zip;'
+  sudo -H -u consul bash -c 'cd ~; wget https://dl.bintray.com/mitchellh/consul/0.5.2_web_ui.zip; unzip *.zip; rm *.zip;'
 
   cat <<EOT > /etc/consul.d/server/config.json
 {
