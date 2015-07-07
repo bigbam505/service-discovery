@@ -1,0 +1,53 @@
+#!/bin/bash
+
+BIND_ADDR=$1
+VAULT_PATH=/usr/local/bin
+
+if [ ! -f "$VAULT_PATH/vault" ];
+then
+  echo "Vault does not exist"
+  if ! command -v unzip > /dev/null; then
+    echo "Unzip does not exist"
+    apt-get update
+    apt-get install unzip
+  fi
+
+  cd $VAULT_PATH
+  wget https://dl.bintray.com/mitchellh/vault/vault_0.1.2_linux_amd64.zip
+  unzip *.zip
+  rm *.zip
+
+  useradd -d /home/vault -m vault -p '' > /dev/null
+
+  mkdir -p /etc/vault.d/
+
+  cat <<EOT > /etc/vault.d/config.hcl
+backend "consul" {
+  address = "$BIND_ADDR:8500"
+  path = "vault"
+}
+
+disable_mlock = true
+
+listener "tcp" {
+ address = "$BIND_ADDR:8200"
+ tls_disable = 1
+}
+EOT
+
+  cat << EOT > /etc/init/vault.conf
+description "Vault server process"
+
+start on (local-filesystems and net-device-up IFACE=eth0)
+stop on runlevel [!12345]
+
+respawn
+
+setuid vault
+setgid vault
+
+exec vault server -config=/etc/vault.d/config.hcl
+
+EOT
+
+fi
